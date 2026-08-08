@@ -2,15 +2,11 @@
 
 A small, synthesizable finite-state-machine (FSM) project for a two-road traffic intersection. The main highway normally has a green light. When a vehicle is detected on the country road, the controller safely changes the signals through yellow and all-red phases before giving the country road a green light.
 
-![State diagram](assets/state-diagram.svg)
+![State diagram](assets/state-diagram-source.png)
 
-## Reference material
+## Original diagram
 
-The supplied source screenshots are retained for provenance in [`assets/reference`](assets/reference/). The working design is transcribed and modernized in the Verilog and documentation files above; the included SVG is an original, clean redraw of the state machine.
-
-| Original state diagram | Original controller pages | Original testbench |
-| --- | --- | --- |
-| ![Source state diagram](assets/reference/state-diagram-source.png) | ![Source controller](assets/reference/controller-source-page-1.png) | ![Source testbench](assets/reference/testbench-source.png) |
+The diagram above is the original source image supplied for this project.
 
 ## Behaviour
 
