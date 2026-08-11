@@ -2,7 +2,7 @@
 
 A small, synthesizable finite-state-machine (FSM) project for a two-road traffic intersection. The main highway normally has a green light. When a vehicle is detected on the country road, the controller safely changes the signals through yellow and all-red phases before giving the country road a green light.
 
-![State diagram]assets/FSM_Traffic_State_Diagram.jpeg
+![State diagram] <img width="924" height="1150" alt="FSM_Traffic_State_Diagram" src="https://github.com/user-attachments/assets/14f69255-6ab6-4337-b109-a57f9cc076ad" />
 
 ## Original diagram
 
