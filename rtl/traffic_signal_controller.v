@@ -1,88 +1,189 @@
-`timescale 1ns/1ps
+`define TRUE 1'b1
+`define FALSE 1'b0
 
-// Two-road traffic signal controller.
-// clear is synchronous and active high. car_on_country_rd is sampled each clock.
-module traffic_signal_controller #(
-    parameter integer YELLOW_CYCLES  = 3,
-    parameter integer ALL_RED_CYCLES = 2
-) (
-    input  wire       clock,
-    input  wire       clear,
-    input  wire       car_on_country_rd,
-    output reg  [2:0] hwy,
-    output reg  [2:0] cntry
-);
+//Delays
+`define Y2RDELAY 3    //Yellow to red delay
+`define R2GDELAY 2    //Red to green delay
 
-    localparam [2:0] RED    = 3'b100;
-    localparam [2:0] YELLOW = 3'b010;
-    localparam [2:0] GREEN  = 3'b001;
+module sig_control
+       (hwy, cntry, x, clock, clear);
 
-    localparam [2:0] S0_MAIN_GREEN          = 3'd0;
-    localparam [2:0] S1_MAIN_YELLOW         = 3'd1;
-    localparam [2:0] S2_ALL_RED_TO_COUNTRY  = 3'd2;
-    localparam [2:0] S3_COUNTRY_GREEN       = 3'd3;
-    localparam [2:0] S4_COUNTRY_YELLOW      = 3'd4;
+//I/O ports
+output [1:0] hwy, cntry;
+//Light output for 3 states of signal
+//GREEN, YELLOW, RED;
+reg [1:0] hwy, cntry;
+//output default signals are registers
 
-    reg [2:0] state;
-    integer phase_count;
+input x;
+//x=TRUE, indicates that there is car on
+//the country road, otherwise FALSE
 
-    // State transition and phase timer. Timer is used only for timed phases.
-    always @(posedge clock) begin
-        if (clear) begin
-            state       <= S0_MAIN_GREEN;
-            phase_count <= 0;
-        end else begin
-            case (state)
-                S0_MAIN_GREEN: begin
-                    phase_count <= 0;
-                    if (car_on_country_rd)
-                        state <= S1_MAIN_YELLOW;
-                end
-                S1_MAIN_YELLOW: begin
-                    if (phase_count >= YELLOW_CYCLES - 1) begin
-                        state       <= S2_ALL_RED_TO_COUNTRY;
-                        phase_count <= 0;
-                    end else
-                        phase_count <= phase_count + 1;
-                end
-                S2_ALL_RED_TO_COUNTRY: begin
-                    if (phase_count >= ALL_RED_CYCLES - 1) begin
-                        state       <= S3_COUNTRY_GREEN;
-                        phase_count <= 0;
-                    end else
-                        phase_count <= phase_count + 1;
-                end
-                S3_COUNTRY_GREEN: begin
-                    phase_count <= 0;
-                    if (!car_on_country_rd)
-                        state <= S4_COUNTRY_YELLOW;
-                end
-                S4_COUNTRY_YELLOW: begin
-                    if (phase_count >= YELLOW_CYCLES - 1) begin
-                        state       <= S0_MAIN_GREEN;
-                        phase_count <= 0;
-                    end else
-                        phase_count <= phase_count + 1;
-                end
-                default: begin
-                    state       <= S0_MAIN_GREEN;
-                    phase_count <= 0;
-                end
-            endcase
+input clock, clear;
+
+parameter RED = 2'd0,
+          YELLOW = 2'd1,
+          GREEN = 2'd2;
+
+//State definition
+parameter S0 = 3'd0, //GREEN    CNTRY    RED
+          S1 = 3'd1, //YELLOW   CNTRY    RED
+          S2 = 3'd2, //RED      CNTRY    RED
+          S3 = 3'd3, //RED      CNTRY    GREEN
+          S4 = 3'd4; //RED      CNTRY    YELLOW
+
+reg [2:0] state;
+reg [2:0] next_state;
+
+//state changes only at positive edge of clock
+always @(posedge clock)
+begin
+    if (clear)
+        state <= S0; //Controller starts in S0 state
+    else
+        state <= next_state;
+end
+
+//Compute values of state and country signals
+always @(state)
+begin
+    case (state)
+        S0: begin
+            hwy = GREEN;
+            cntry = RED;
         end
-    end
 
-    // Moore-style output decoder. Defaults leave both directions red on recovery.
-    always @(*) begin
-        hwy   = RED;
-        cntry = RED;
-        case (state)
-            S0_MAIN_GREEN:    hwy = GREEN;
-            S1_MAIN_YELLOW:   hwy = YELLOW;
-            S3_COUNTRY_GREEN: cntry = GREEN;
-            S4_COUNTRY_YELLOW: cntry = YELLOW;
-            default: begin end
-        endcase
-    end
+        S1: begin
+            hwy = YELLOW;
+            cntry = RED;
+        end
 
-endmodule
+        S2: begin
+            hwy = RED;
+            cntry = RED;
+        end
+
+        S3: begin
+            hwy = RED;
+            cntry = GREEN;
+        end
+
+        S4: begin
+            hwy = RED;
+            cntry = YELLOW;
+        end
+    endcase
+end
+
+//State machine using case statements
+always @(state or x)
+begin
+    case (state)
+
+        S0: begin
+            if (x)
+                next_state = S1;
+            else
+                next_state = S0;
+        end
+
+        S1: begin
+            repeat (`Y2RDELAY) @(posedge clock);
+            next_state = S2;
+        end
+
+
+
+        `define TRUE 1'b1
+`define FALSE 1'b0
+
+//Delays
+`define Y2RDELAY 3    //Yellow to red delay
+`define R2GDELAY 2    //Red to green delay
+
+module sig_control
+       (hwy, cntry, x, clock, clear);
+
+//I/O ports
+output [1:0] hwy, cntry;
+//Light output for 3 states of signal
+//GREEN, YELLOW, RED;
+reg [1:0] hwy, cntry;
+//output default signals are registers
+
+input x;
+//x=TRUE, indicates that there is car on
+//the country road, otherwise FALSE
+
+input clock, clear;
+
+parameter RED = 2'd0,
+          YELLOW = 2'd1,
+          GREEN = 2'd2;
+
+//State definition
+parameter S0 = 3'd0, //GREEN    CNTRY    RED
+          S1 = 3'd1, //YELLOW   CNTRY    RED
+          S2 = 3'd2, //RED      CNTRY    RED
+          S3 = 3'd3, //RED      CNTRY    GREEN
+          S4 = 3'd4; //RED      CNTRY    YELLOW
+
+reg [2:0] state;
+reg [2:0] next_state;
+
+//state changes only at positive edge of clock
+always @(posedge clock)
+begin
+    if (clear)
+        state <= S0; //Controller starts in S0 state
+    else
+        state <= next_state;
+end
+
+//Compute values of state and country signals
+always @(state)
+begin
+    case (state)
+        S0: begin
+            hwy = GREEN;
+            cntry = RED;
+        end
+
+        S1: begin
+            hwy = YELLOW;
+            cntry = RED;
+        end
+
+        S2: begin
+            hwy = RED;
+            cntry = RED;
+        end
+
+        S3: begin
+            hwy = RED;
+            cntry = GREEN;
+        end
+
+        S4: begin
+            hwy = RED;
+            cntry = YELLOW;
+        end
+    endcase
+end
+
+//State machine using case statements
+always @(state or x)
+begin
+    case (state)
+
+        S0: begin
+            if (x)
+                next_state = S1;
+            else
+                next_state = S0;
+        end
+
+        S1: begin
+            repeat (`Y2RDELAY) @(posedge clock);
+            next_state = S2;
+        end
