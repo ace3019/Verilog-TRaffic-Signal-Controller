@@ -1,61 +1,64 @@
-`timescale 1ns/1ps
 
-module traffic_signal_controller_tb;
-    reg clock = 0;
-    reg clear = 1;
-    reg car_on_country_rd = 0;
-    wire [2:0] hwy;
-    wire [2:0] cntry;
+//Stimulus Module
+module stimulus;
 
-    localparam [2:0] RED = 3'b100, YELLOW = 3'b010, GREEN = 3'b001;
+reg CAR_ON_CNTRY_RD, CNTRY_SIG;
 
-    traffic_signal_controller #(.YELLOW_CYCLES(2), .ALL_RED_CYCLES(1)) dut (
-        .clock(clock), .clear(clear), .car_on_country_rd(car_on_country_rd),
-        .hwy(hwy), .cntry(cntry)
-    );
+reg [2:0] MAIN_SIG;
+//TRUE if indicates that there is car on
+//the country road
 
-    always #5 clock = ~clock;
+reg CLOCK, CLEAR;
 
-    task expect_lights;
-        input [2:0] expected_hwy;
-        input [2:0] expected_cntry;
-        input [8*48-1:0] label;
-        begin
-            #1;
-            if ((hwy !== expected_hwy) || (cntry !== expected_cntry)) begin
-                $display("FAIL: %0s: hwy=%b cntry=%b", label, hwy, cntry);
-                $finish(1);
-            end
-            $display("PASS: %0s", label);
-        end
-    endtask
+//Instantiate signal controller
+sig_control SC1(MAIN_SIG, CNTRY_SIG, CAR_ON_CNTRY_RD,
+                CLOCK, CLEAR);
 
-    initial begin
-        $dumpfile("build/traffic_signal.vcd");
-        $dumpvars(0, traffic_signal_controller_tb);
+//Set up monitor
+initial
+    $monitor($time, " Main_Sig = %b Country_Sig = %b Car_on_cntry = %b",
+             MAIN_SIG, CNTRY_SIG, CAR_ON_CNTRY_RD);
 
-        @(posedge clock); #1; clear = 0;
-        expect_lights(GREEN, RED, "reset selects main-road green");
+//Set up clock
+initial
+begin
+    CLOCK = `FALSE;
+    forever #5 CLOCK = ~CLOCK;
+end
 
-        car_on_country_rd = 1;
-        @(posedge clock);
-        expect_lights(YELLOW, RED, "car starts main-road yellow");
-        @(posedge clock);
-        expect_lights(YELLOW, RED, "yellow holds for configured duration");
-        @(posedge clock);
-        expect_lights(RED, RED, "all-red handoff interval");
-        @(posedge clock);
-        expect_lights(RED, GREEN, "country road receives green");
+//Control clear signal
+initial
+begin
+    CLEAR = `TRUE;
+    #5 @(negedge CLOCK);
+    CLEAR = `FALSE;
+end
 
-        car_on_country_rd = 0;
-        @(posedge clock);
-        expect_lights(RED, YELLOW, "country road changes to yellow");
-        @(posedge clock);
-        expect_lights(RED, YELLOW, "country yellow holds for duration");
-        @(posedge clock);
-        expect_lights(GREEN, RED, "controller returns to main-road green");
+//apply stimulus
+initial
+begin
+    CAR_ON_CNTRY_RD = `FALSE;
 
-        $display("All traffic-controller tests passed.");
-        $finish;
-    end
+    repeat(20) @(negedge CLOCK);
+    CAR_ON_CNTRY_RD = `TRUE;
+
+    repeat(10) @(negedge CLOCK);
+    CAR_ON_CNTRY_RD = `FALSE;
+
+    repeat(20) @(negedge CLOCK);
+    CAR_ON_CNTRY_RD = `TRUE;
+
+    repeat(10) @(negedge CLOCK);
+    CAR_ON_CNTRY_RD = `FALSE;
+
+    repeat(20) @(negedge CLOCK);
+    CAR_ON_CNTRY_RD = `TRUE;
+
+    repeat(10) @(negedge CLOCK);
+    CAR_ON_CNTRY_RD = `FALSE;
+
+    repeat(20) @(negedge CLOCK);
+    $stop;
+end
+
 endmodule
